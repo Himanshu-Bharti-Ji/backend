@@ -2,7 +2,7 @@ const User = require("../models/userModel.js");
 const ApiError = require("../utils/ApiError.js");
 const ApiResponse = require("../utils/ApiResponse.js");
 const { asyncHandeler } = require("../utils/asyncHandeler.js");
-
+const validateMongoDbId = require("../utils/validateMongodbId.js");
 
 const accessToken = async (userId) => {
     try {
@@ -17,11 +17,11 @@ const accessToken = async (userId) => {
 const registerUser = asyncHandeler(async (req, res) => {
 
     // 1. get user details from frontend
-    const { firstName, lastName, email, password } = req.body
+    const { firstName, lastName, email, password, role, cart, address, wishlist } = req.body
 
     // 2. validation - not empty
     if (
-        [firstName, email, password].some((field) => field?.trim() === "")
+        [firstName, email, password, role, cart, address, wishlist].some((field) => field?.trim() === "")
     ) {
         throw new ApiError(400, "Some fields are required")
     }
@@ -38,7 +38,11 @@ const registerUser = asyncHandeler(async (req, res) => {
         firstName,
         lastName,
         email,
-        password
+        password,
+        role,
+        cart,
+        address,
+        wishlist
     })
 
     // 5. remove password field from response
@@ -112,9 +116,11 @@ const getAllUsers = asyncHandeler(async (req, res) => {
 })
 
 const getCurrentUser = asyncHandeler(async (req, res) => {
-    const { id } = req.params;
+    const { _id } = req.user;
+    validateMongoDbId(_id)
+
     try {
-        const currentUser = await User.findById(id).select("-password")
+        const currentUser = await User.findById(_id).select("-password")
 
         if (!currentUser) {
             // If currentUser is null, the user doesn't exist
@@ -133,16 +139,19 @@ const getCurrentUser = asyncHandeler(async (req, res) => {
 })
 
 const updateUserDetails = asyncHandeler(async (req, res) => {
-    const { id } = req.params
+    // console.log(req.user)
+    const { firstName, lastName, email } = req.body
+    const { _id } = req.user
+    validateMongoDbId(_id)
     try {
         // console.log(res.user._id)
         const userDetails = await User.findByIdAndUpdate(
-            id,
+            _id,
             {
                 $set: {
-                    firstName: req.body?.firstName,
-                    lastName: req.body?.lastName,
-                    email: req.body?.email
+                    firstName,
+                    lastName,
+                    email
                 }
             },
             { new: true }
@@ -158,6 +167,7 @@ const updateUserDetails = asyncHandeler(async (req, res) => {
 
 const deleteCurrentUser = asyncHandeler(async (req, res) => {
     const { id } = req.params;
+    validateMongoDbId(id)
     try {
         const currentUser = await User.findByIdAndDelete(id).select("-password")
 
@@ -177,4 +187,60 @@ const deleteCurrentUser = asyncHandeler(async (req, res) => {
     }
 })
 
-module.exports = { registerUser, loginUser, getAllUsers, getCurrentUser, deleteCurrentUser, updateUserDetails }
+const blockUser = asyncHandeler(async (req, res) => {
+    const { id } = req.params;
+    validateMongoDbId(id)
+
+    try {
+        const blockUser = await User.findByIdAndUpdate(
+            id,
+            {
+                $set: {
+                    isBlocked: true
+                }
+            },
+            { new: true }
+        )
+
+        if (!blockUser) {
+            throw new ApiError(404, "user does not exist")
+        }
+
+        return res.status(200)
+            .json(new ApiResponse(200, {}, "user blocked successfully"))
+
+    } catch (error) {
+        throw new ApiError(404, "error while blocking the user")
+    }
+
+})
+
+
+const unBlockUser = asyncHandeler(async (req, res) => {
+    const { id } = req.params;
+    validateMongoDbId(id)
+
+    try {
+        const unBlockUser = await User.findByIdAndUpdate(
+            id,
+            {
+                $set: {
+                    isBlocked: false
+                }
+            },
+            { new: true }
+        )
+
+        if (!unBlockUser) {
+            throw new ApiError(404, "user does not exist")
+        }
+
+        return res.status(200)
+            .json(new ApiResponse(200, {}, "user unblocked successfully"))
+
+    } catch (error) {
+        throw new ApiError(404, "error while unblocking the user")
+    }
+})
+
+module.exports = { registerUser, loginUser, getAllUsers, getCurrentUser, deleteCurrentUser, updateUserDetails, blockUser, unBlockUser }
