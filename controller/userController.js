@@ -97,4 +97,84 @@ const loginUser = asyncHandeler(async (req, res) => {
 
 })
 
-module.exports = { registerUser, loginUser }
+const getAllUsers = asyncHandeler(async (req, res) => {
+    try {
+        const allUsers = await User.find().select("-password")
+        return res.status(200)
+            .json(new ApiResponse(
+                200,
+                allUsers,
+                "Users fetched successfully"
+            ))
+    } catch (error) {
+        throw new ApiError(500, "Server error while fetching users")
+    }
+})
+
+const getCurrentUser = asyncHandeler(async (req, res) => {
+    const { id } = req.params;
+    try {
+        const currentUser = await User.findById(id).select("-password")
+
+        if (!currentUser) {
+            // If currentUser is null, the user doesn't exist
+            return res.status(404).json(new ApiError(404, "User not found"));
+        }
+
+        return res.status(200)
+            .json(new ApiResponse(
+                200,
+                currentUser,
+                "User fetched successfully"
+            ))
+    } catch (error) {
+        throw new ApiError(500, "Server error while fetching the user")
+    }
+})
+
+const updateUserDetails = asyncHandeler(async (req, res) => {
+    const { id } = req.params
+    try {
+        // console.log(res.user._id)
+        const userDetails = await User.findByIdAndUpdate(
+            id,
+            {
+                $set: {
+                    firstName: req.body?.firstName,
+                    lastName: req.body?.lastName,
+                    email: req.body?.email
+                }
+            },
+            { new: true }
+        ).select("-password")
+        // console.log(userDetails)
+
+        return res.status(200)
+            .json(new ApiResponse(200, userDetails, "Account details updated successfullly"))
+    } catch (error) {
+        throw new ApiError(500, "Error while updating the user")
+    }
+})
+
+const deleteCurrentUser = asyncHandeler(async (req, res) => {
+    const { id } = req.params;
+    try {
+        const currentUser = await User.findByIdAndDelete(id).select("-password")
+
+        if (!currentUser) {
+            // If currentUser is null, the user doesn't exist
+            return res.status(404).json(new ApiError(404, "User not found"));
+        }
+
+        return res.status(200)
+            .json(new ApiResponse(
+                200,
+                currentUser,
+                "User deleted successfully"
+            ))
+    } catch (error) {
+        throw new ApiError(500, "Server error while deleting the user")
+    }
+})
+
+module.exports = { registerUser, loginUser, getAllUsers, getCurrentUser, deleteCurrentUser, updateUserDetails }
