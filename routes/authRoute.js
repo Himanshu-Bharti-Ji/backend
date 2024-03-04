@@ -1,5 +1,5 @@
 const express = require("express");
-const { registerUser, loginUser, getAllUsers, getCurrentUser, deleteCurrentUser, updateUserDetails, blockUser, unBlockUser } = require("../controller/userController.js");
+const { registerUser, loginUser, getAllUsers, getCurrentUser, deleteCurrentUser, updateUserDetails, blockUser, unBlockUser, logoutUser } = require("../controller/userController.js");
 const { verifyJWT, isAdmin } = require("../middlewares/authMiddleware.js");
 const router = express.Router();
 
@@ -12,5 +12,6 @@ router.delete("/:id", deleteCurrentUser);
 router.put("/update-account", verifyJWT, updateUserDetails)
 router.put("/block-account/:id", verifyJWT, isAdmin, blockUser)
 router.put("/unblock-account/:id", verifyJWT, isAdmin, unBlockUser)
+router.post("/logout", verifyJWT, logoutUser);
 
 module.exports = router;

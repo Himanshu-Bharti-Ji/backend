@@ -6,6 +6,7 @@ const dotenv = require("dotenv").config({ path: ".env" });
 const PORT = process.env.PORT || 4000;
 const authRouter = require("./routes/authRoute.js");
 const bodyParser = require("body-parser");
+const cookieParser = require("cookie-parser");
 
 
 // I add app.use and app.listen in try catch 
@@ -14,6 +15,8 @@ dbConnect()
 
         app.use(bodyParser.json());
         app.use(bodyParser.urlencoded({ extended: false }))
+
+        app.use(cookieParser())
 
 
         app.use("/api/v1/user", authRouter)

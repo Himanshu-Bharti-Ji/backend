@@ -4,11 +4,16 @@ const ApiResponse = require("../utils/ApiResponse.js");
 const { asyncHandeler } = require("../utils/asyncHandeler.js");
 const validateMongoDbId = require("../utils/validateMongodbId.js");
 
-const accessToken = async (userId) => {
+const generateAccessAndRefreshToken = async (userId) => {
     try {
         const user = await User.findById(userId)
-        const token = user.generateToken()
-        return token;
+        const accessToken = user.generateToken()
+        const refreshToken = user.generateRefreshToken()
+
+        user.refreshToken = refreshToken
+
+        await user.save({ validateBeforeSave: false })
+        return { accessToken, refreshToken }
     } catch (error) {
         throw new ApiError(500, "something went wrong while generating access and refresh token")
     }
@@ -46,7 +51,7 @@ const registerUser = asyncHandeler(async (req, res) => {
     })
 
     // 5. remove password field from response
-    const createdUser = await User.findById(user._id).select("-password")
+    const createdUser = await User.findById(user._id).select("-password -refreshToken")
 
     // 6. check for user creation
     if (!createdUser) {
@@ -86,19 +91,48 @@ const loginUser = asyncHandeler(async (req, res) => {
 
     // 5. generate token
 
-    const token = await accessToken(user._id)
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id)
 
-    const loggedInUser = await User.findById(user._id).select("-password")
+    const loggedInUser = await User.findById(user._id).select("-password -refreshToken")
+
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
 
     return res.status(200)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", refreshToken, options)
         .json(new ApiResponse(
             200,
             {
-                user: loggedInUser, token
+                user: loggedInUser, accessToken, refreshToken
             },
             "User logged in successfully"
         ))
 
+})
+
+const logoutUser = asyncHandeler(async (req, res) => {
+    await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $unset: {
+                refreshToken: 1
+            }
+        },
+        { new: true }
+    )
+
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+
+    return res.status(200)
+        .clearCookie("accessToken", options)
+        .clearCookie("refreshToken", options)
+        .json(new ApiResponse(200, {}, "User Logged Out successfully"))
 })
 
 const getAllUsers = asyncHandeler(async (req, res) => {
@@ -215,7 +249,6 @@ const blockUser = asyncHandeler(async (req, res) => {
 
 })
 
-
 const unBlockUser = asyncHandeler(async (req, res) => {
     const { id } = req.params;
     validateMongoDbId(id)
@@ -243,4 +276,4 @@ const unBlockUser = asyncHandeler(async (req, res) => {
     }
 })
 
-module.exports = { registerUser, loginUser, getAllUsers, getCurrentUser, deleteCurrentUser, updateUserDetails, blockUser, unBlockUser }
+module.exports = { registerUser, loginUser, getAllUsers, getCurrentUser, deleteCurrentUser, updateUserDetails, blockUser, unBlockUser, logoutUser }

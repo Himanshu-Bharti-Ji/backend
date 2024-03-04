@@ -40,6 +40,9 @@ var userSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Wishlist"
     },
+    refreshToken: {
+        type: String
+    }
 }, { timestamps: true });
 
 
@@ -68,6 +71,20 @@ userSchema.methods.generateToken = function () {
         process.env.TOKEN_SECERET,
         {
             expiresIn: process.env.TOKEN_EXPIRY
+        }
+    )
+}
+
+// Generating Refresh Token
+
+userSchema.methods.generateRefreshToken = function () {
+    return jwt.sign(
+        {
+            _id: this._id,
+        },
+        process.env.REFRESH_TOKEN_SECRET,
+        {
+            expiresIn: process.env.REFRESH_TOKEN_EXPIRY
         }
     )
 }
