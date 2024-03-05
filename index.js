@@ -5,8 +5,10 @@ const app = express();
 const dotenv = require("dotenv").config({ path: ".env" });
 const PORT = process.env.PORT || 4000;
 const authRouter = require("./routes/authRoute.js");
+const productRouter = require("./routes/productRoute.js");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
+
 
 
 // I add app.use and app.listen in try catch 
@@ -20,6 +22,7 @@ dbConnect()
 
 
         app.use("/api/v1/user", authRouter)
+        app.use("/api/v1/product", productRouter)
 
 
         app.listen(PORT, () => {
