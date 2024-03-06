@@ -8,12 +8,15 @@ const authRouter = require("./routes/authRoute.js");
 const productRouter = require("./routes/productRoute.js");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
+const morgan = require("morgan");
 
 
 
 // I add app.use and app.listen in try catch 
 dbConnect()
     .then(() => {
+
+        app.use(morgan("dev")); // log requests to the console
 
         app.use(bodyParser.json());
         app.use(bodyParser.urlencoded({ extended: false }))

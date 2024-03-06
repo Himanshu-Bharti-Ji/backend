@@ -1,10 +1,15 @@
+const { request } = require("express");
 const Product = require("../models/productModel.js");
 const ApiError = require("../utils/ApiError.js");
 const ApiResponse = require("../utils/ApiResponse.js");
 const { asyncHandeler } = require("../utils/asyncHandeler.js");
-const validateMongoDbId = require("../utils/validateMongodbId.js");
+const slugify = require("slugify");
 
 const createProduct = asyncHandeler(async (req, res) => {
+
+    if (req.body.title) {
+        req.body.slug = slugify(req.body.title);
+    }
 
     const newProduct = await Product.create(req.body);
 
@@ -50,7 +55,25 @@ const getAllProducts = asyncHandeler(async (req, res) => {
     }
 })
 
+const updateProduct = asyncHandeler(async (req, res) => {
+    const { _id } = req.params
+
+    if (req.body.title) {
+        req.body.slug = slugify(req.body.title)
+    }
+
+    const productDetails = await Product.findByIdAndUpdate(
+        _id,
+        req.body,
+        { new: true }
+    )
+
+    return res.status(200)
+        .json(new ApiResponse(200, productDetails, "Product details updated successfully"))
+
+})
 
 
 
-module.exports = { createProduct, getCurrentProduct, getAllProducts }
+
+module.exports = { createProduct, getCurrentProduct, getAllProducts, updateProduct }
