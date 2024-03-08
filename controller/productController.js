@@ -56,14 +56,19 @@ const getAllProducts = asyncHandeler(async (req, res) => {
 })
 
 const updateProduct = asyncHandeler(async (req, res) => {
-    const { _id } = req.params
+    const id = req.params
+    console.log(id)
+    console.log(req.body.title)
 
     if (req.body.title) {
         req.body.slug = slugify(req.body.title)
+        console.log(req.body.slug);
     }
 
-    const productDetails = await Product.findOneAndUpdate(
-        _id,
+    console.log(req.body);
+
+    const productDetails = await Product.findByIdAndUpdate(
+        id,
         req.body,
         { new: true }
     )
