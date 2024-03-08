@@ -78,7 +78,18 @@ const updateProduct = asyncHandeler(async (req, res) => {
 
 })
 
+const deleteProduct = asyncHandeler(async (req, res) => {
+    const { id } = req.params;
+
+    const deleteProduct = await Product.findByIdAndDelete(id)
+
+    return res.status(200).json(
+        new ApiResponse(200, deleteProduct, 'This product has been deleted')
+    )
+
+})
 
 
 
-module.exports = { createProduct, getCurrentProduct, getAllProducts, updateProduct }
+
+module.exports = { createProduct, getCurrentProduct, getAllProducts, updateProduct, deleteProduct }
