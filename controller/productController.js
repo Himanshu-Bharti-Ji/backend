@@ -1,4 +1,4 @@
-const { request } = require("express");
+const { request, query } = require("express");
 const Product = require("../models/productModel.js");
 const ApiError = require("../utils/ApiError.js");
 const ApiResponse = require("../utils/ApiResponse.js");
@@ -42,7 +42,59 @@ const getCurrentProduct = asyncHandeler(async (req, res) => {
 
 const getAllProducts = asyncHandeler(async (req, res) => {
     try {
-        const allProducts = await Product.find()
+
+        // Filtering
+        const queryObj = { ...req.query };
+        // console.log(queryObj)
+        const excludeFields = ["page", "sort", "limit", "fields"];
+        // console.log(queryObj)
+        excludeFields.forEach((el) => delete queryObj[el]);
+        let queryStr = JSON.stringify(queryObj);
+        // console.log(queryStr)
+        queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, (match) => `$${match}`);
+        // console.log(queryStr)
+
+        let query = Product.find(JSON.parse(queryStr))
+
+
+        // Sorting
+        if (req.query.sort) {
+            const sortBy = req.query.sort.split(",").join(" ")
+            query = query.sort(sortBy);
+        } else {
+            query = query.sort("-createdAt")
+        }
+
+
+        // Limiting the fields 
+        if (req.query.fields) {
+            const fields = req.query.fields.split(",").join(" ")
+            query = query.select(fields);
+        } else {
+            query = query.select("-__v");
+        }
+        // Pagination
+        const page = parseInt(req.query.page ? req.query.page : 1);
+        const limit = parseInt(req.query.limit ? req.query.limit : 6);
+        const skip = (page - 1) * limit;
+        query = query.skip(skip).limit(limit);
+        console.log(page, limit, skip);
+
+        if (req.query.page) {
+            const totalPages = await Product.countDocuments();
+            if (skip >= totalPages) {
+                throw new ApiError(404, "Page not found")
+
+            }
+        }
+
+
+
+
+
+
+        const allProducts = await query
+        // console.log(allProducts)
 
         if (!allProducts) {
             throw new ApiError(404, "No products found in database.")
@@ -54,6 +106,8 @@ const getAllProducts = asyncHandeler(async (req, res) => {
         throw new ApiError(500, error?.message || "An error occurred when fetching all products.")
     }
 })
+
+
 
 const updateProduct = asyncHandeler(async (req, res) => {
     const { id } = req.params
