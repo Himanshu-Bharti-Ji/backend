@@ -4,6 +4,7 @@ const ApiResponse = require("../utils/ApiResponse.js");
 const { asyncHandeler } = require("../utils/asyncHandeler.js");
 const validateMongoDbId = require("../utils/validateMongodbId.js");
 const jwt = require("jsonwebtoken");
+const sendEmail = require("./emailController.js");
 
 const generateAccessAndRefreshToken = async (userId) => {
     try {
@@ -329,4 +330,73 @@ const unBlockUser = asyncHandeler(async (req, res) => {
     }
 })
 
-module.exports = { registerUser, loginUser, getAllUsers, getCurrentUser, deleteCurrentUser, updateUserDetails, blockUser, unBlockUser, logoutUser, refreshAccessToken }
+const updatePassword = asyncHandeler(async (req, res) => {
+    const { _id } = req.user;
+    const { password } = req.body;
+    validateMongoDbId(_id)
+    const user = await User.findById(_id);
+
+    if (password) {
+        user.password = password;
+        const updatePassword = await user.save();
+
+        return res.status(201)
+            .json(new ApiResponse(201, updatePassword, "password updated successfully"));
+    } else {
+        throw new ApiError(400, "please provide a valid password");
+    }
+
+
+
+})
+
+const forgotPasswordToken = asyncHandeler(async (req, res) => {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        throw new ApiError(404, 'user not found or email is not registered');
+    }
+
+    try {
+        const token = await user.createPasswordResetToken();
+        await user.save();
+        // send reset password mail with token to user's email id  
+        const resetURL = `Follow this link to reset your Password: <a href="http://localhost:5000/api/v1/user/reset-password/${token}">Click Here</a> \n The link is valid till 10 minutes from now.`;
+        const data = {
+            to: email,
+            subject: "Forgot Password Link",
+            text: "Please use the below link to reset your password.",
+            html: resetURL
+        }
+        sendEmail(data);
+        console.log(data);
+        return res.status(200)
+            .json(new ApiResponse(
+                200,
+                token,
+                `A link has been sent to your email  ${email} to reset your password.`
+            ));
+
+
+    } catch (error) {
+        throw new Error(error?.message || "something went wrong!");
+        // Used 'next' to pass the error to the error handling middleware
+
+    }
+})
+
+module.exports = {
+    registerUser,
+    loginUser,
+    getAllUsers,
+    getCurrentUser,
+    deleteCurrentUser,
+    updateUserDetails,
+    blockUser,
+    unBlockUser,
+    logoutUser,
+    refreshAccessToken,
+    updatePassword,
+    forgotPasswordToken
+}
