@@ -370,7 +370,7 @@ const forgotPasswordToken = asyncHandeler(async (req, res) => {
             html: resetURL
         }
         sendEmail(data);
-        console.log(data);
+        // console.log(data);
         return res.status(200)
             .json(new ApiResponse(
                 200,

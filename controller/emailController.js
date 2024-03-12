@@ -4,18 +4,25 @@ const { asyncHandeler } = require("../utils/asyncHandeler.js");
 const sendEmail = async (data, req, res) => {
 
     const transporter = nodemailer.createTransport({
+        service: "gmail",
         host: "smtp.gmail.com",
-        port: 587,
-        secure: false, // Use `true` for port 465, `false` for all other ports
+        port: 465,
+        logger: true,
+        debug: true,
+        // secureConnection: false,
+        secure: true, // Use `true` for port 465, `false` for all other ports
         auth: {
             user: process.env.MAIL_ID,
             pass: process.env.MAIL_PASS,
         },
+        tls: {
+            rejectUnauthorized: true
+        }
     });
 
     // send mail with defined transport object
     const info = await transporter.sendMail({
-        from: '"Hey 👻" <abc@gmail.com>', // sender address
+        from: '"Hey 👻" <himanshubhartisoe@gamil.com>', // sender address
         to: data.to, // list of receivers
         subject: data.subject, // Subject line
         text: data.text, // plain text body
