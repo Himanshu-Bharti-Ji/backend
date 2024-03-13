@@ -1,5 +1,6 @@
 const { request, query } = require("express");
 const Product = require("../models/productModel.js");
+const User = require("../models/userModel.js");
 const ApiError = require("../utils/ApiError.js");
 const ApiResponse = require("../utils/ApiResponse.js");
 const { asyncHandeler } = require("../utils/asyncHandeler.js");
@@ -88,11 +89,6 @@ const getAllProducts = asyncHandeler(async (req, res) => {
             }
         }
 
-
-
-
-
-
         const allProducts = await query
         // console.log(allProducts)
 
@@ -143,7 +139,143 @@ const deleteProduct = asyncHandeler(async (req, res) => {
 
 })
 
+const addToWishlist = asyncHandeler(async (req, res) => {
+    const { _id } = req.user;
+    const { productId } = req.body;
+    console.log(_id, productId);
+
+
+    // if (!user) {
+    //     throw new ApiError(401, 'User Not Found')
+    // }
+
+    // console.log(user);
+
+    try {
+        const user = await User.findById(_id);
+        const alreadyAdded = user.wishlist.find((id) => id.toString() === productId);
+
+        if (alreadyAdded) {
+            let user = await User.findByIdAndUpdate(
+                _id,
+                {
+                    $pull: { wishlist: productId }
+                },
+                { new: true }
+            )
+            return res.status(200)
+                .json(new ApiResponse(200, user, "Product Removed From WishList"))
+        } else {
+            let user = await User.findByIdAndUpdate(
+                _id,
+                {
+                    $push: { wishlist: productId }
+                },
+                { new: true }
+            )
+            return res.status(200)
+                .json(new ApiResponse(200, user, "Product Added To WishList"))
+        }
+    } catch (error) {
+        throw new ApiError(500, error?.message || 'Server Error');
+    }
+
+})
+
+const ratings = asyncHandeler(async (req, res) => {
+    const { _id } = req.user;
+    const { star, productId } = req.body;
+
+    const product = await Product.findById(productId);
+
+    if (!product) {
+        throw new ApiError(404, "Product Not Found");
+    }
+
+    // Checking If The User Has Already Rated This Product
+    const alreadyRated = product.ratings.find((userId) => userId.postedBy.toString() === _id.toString());
+
+    if (alreadyRated) {
+        const updateRatings = await Product.updateOne(
+            {
+                ratings: { $elemMatch: alreadyRated }
+            },
+            {
+                $set: { "ratings.$.star": star }
+            },
+            { new: true }
+        )
+
+        // return res.status(201)
+        //     .json(new ApiResponse(
+        //         201,
+        //         updateRatings,
+        //         "Your rating has been updated"
+        //     ))
+    } else {
+        //   Push the rating to users ratings list 
+        const rateProduct = await Product.findByIdAndUpdate(
+            product._id,
+            {
+                $push: {
+                    ratings: {
+                        star: star,
+                        postedBy: _id,
+                    }
+                }
+            },
+            { new: true }
+        )
+
+        // return res.status(201)
+        //     .json(new ApiResponse(
+        //         201,
+        //         rateProduct,
+        //         "You have rated this product successfully!"
+        //     ))
+    }
+
+    const getAllRatings = await Product.findById(productId);
+    let totalRatings = getAllRatings.ratings.length;
+    let ratingSum = getAllRatings.ratings
+        .map(rating => rating.star)
+        .reduce((prevValue, currValue) => prevValue + currValue, 0)
+
+    let avgRating = Math.round(ratingSum / totalRatings);
+    // Update the average rating in the database
+    const finalProduct = await Product.findByIdAndUpdate(
+        productId,
+        { totalRatings: avgRating },
+        { new: true }
+    )
+
+
+    return res.status(201)
+        .json(new ApiResponse(
+            201,
+            finalProduct,
+            'Your ratings has been added to our records.'
+
+        ))
 
 
 
-module.exports = { createProduct, getCurrentProduct, getAllProducts, updateProduct, deleteProduct }
+
+
+
+
+
+})
+
+
+
+
+module.exports = {
+    createProduct,
+    getCurrentProduct,
+    getAllProducts,
+    updateProduct,
+    deleteProduct,
+    addToWishlist,
+    ratings
+}
