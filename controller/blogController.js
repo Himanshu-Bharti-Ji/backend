@@ -41,6 +41,8 @@ const getCurrentBlog = asyncHandeler(async (req, res) => {
     validateMongoDbId(id)
 
     const blog = await Blog.findById(id)
+        .populate("likes")
+        .populate("dislikes");
 
     if (!blog) {
         throw new ApiError(404, "No Blog Found with given ID");
@@ -57,7 +59,7 @@ const getCurrentBlog = asyncHandeler(async (req, res) => {
     return res.status(200)
         .json(new ApiResponse(
             200,
-            updateViews,
+            blog,
             "Blog Details Retrieved Successfully"
         ));
 })
@@ -89,22 +91,126 @@ const deleteCurrentBlog = asyncHandeler(async (req, res) => {
     }
 })
 
-// const likeBlog = asyncHandeler(async (req, res) => {
-//     const { blogId } = req.body;
-//     validateMongoDbId(blogId)
+const likeBlog = asyncHandeler(async (req, res) => {
+    const { blogId } = req.body;
+    validateMongoDbId(blogId)
 
-//     const blog = await Blog.findById(blogId)
+    //  find the blog which you want to like
+    const blog = await Blog.findById(blogId)
 
-//     //checking if the user already liked the post or not
-//     if (blog.likes.includes(req.user._id)) {
-//         return res.status(400).json('You have already Liked This Post')
-//     }
-// })
+    // find  the user who is making a request
+    const loginUserId = req.user?._id;
+
+    // check whether the user already liked or not
+    const isLiked = blog?.isLiked;
+
+    // check whether the user disliked or not
+    const alreadyDisliked = blog?.dislikes?.find(
+        (userId) => userId?.toString() === loginUserId?.toString()
+    );
+
+    if (alreadyDisliked) {
+        const blog = await Blog.findByIdAndUpdate(
+            blogId,
+            {
+                $pull: { dislikes: loginUserId },
+                isDisiked: false
+            },
+            { new: true }
+        );
+        return res.status(201).json(new ApiResponse(201, blog, 'You have undone your Dislike'));
+    }
+
+    if (isLiked) {
+        const blog = await Blog.findByIdAndUpdate(
+            blogId,
+            {
+                $pull: { likes: loginUserId },
+                isLiked: false
+            },
+            { new: true }
+        );
+        return res.status(201).json(new ApiResponse(201, blog, "You don't Like this blog anymore"));
+    } else {
+        // add the user id in the array of users who has liked it
+        const blog = await Blog.findByIdAndUpdate(
+            blogId,
+            {
+                $push: { likes: loginUserId },
+                isLiked: true
+            },
+            { new: true }
+        );
+        return res.status(201).json(new ApiResponse(201, blog, "You like this blog now!"));
+
+    }
+
+
+})
+
+const dislikeBlog = asyncHandeler(async (req, res) => {
+    const { blogId } = req.body;
+    validateMongoDbId(blogId)
+
+    //  find the blog which you want to dislike
+    const blog = await Blog.findById(blogId)
+
+    // find  the user who is making a request
+    const loginUserId = req.user?._id;
+
+    // check whether the user already disliked or not
+    const isDisliked = blog?.isDisiked;
+
+    // check whether the user liked or not
+    const alreadyLiked = blog?.likes?.find(
+        (userId) => userId?.toString() === loginUserId?.toString()
+    );
+
+    if (alreadyLiked) {
+        const blog = await Blog.findByIdAndUpdate(
+            blogId,
+            {
+                $pull: { likes: loginUserId },
+                isLiked: false
+            },
+            { new: true }
+        );
+        return res.status(201).json(new ApiResponse(201, blog, 'You have undone your like'));
+    }
+
+    if (isDisliked) {
+        const blog = await Blog.findByIdAndUpdate(
+            blogId,
+            {
+                $pull: { dislikes: loginUserId },
+                isDisiked: false
+            },
+            { new: true }
+        );
+        return res.status(201).json(new ApiResponse(201, blog, "You don't dislike this blog anymore"));
+    } else {
+        // add the user id in the array of users who has liked it
+        const blog = await Blog.findByIdAndUpdate(
+            blogId,
+            {
+                $push: { dislikes: loginUserId },
+                isDisiked: true
+            },
+            { new: true }
+        );
+        return res.status(201).json(new ApiResponse(201, blog, "You dislike this blog now!"));
+
+    }
+
+
+})
 
 module.exports = {
     createBlog,
     updateBlog,
     getCurrentBlog,
     getAllBlogs,
-    deleteCurrentBlog
+    deleteCurrentBlog,
+    likeBlog,
+    dislikeBlog,
 }
