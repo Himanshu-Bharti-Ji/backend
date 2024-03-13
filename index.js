@@ -9,6 +9,7 @@ const productRouter = require("./routes/productRoute.js");
 const prodCategoryRouter = require("./routes/prodCategoryRoute.js");
 const blogCategoryRouter = require("./routes/blogCategoryRoute.js");
 const blogRouter = require("./routes/blogRoute.js");
+const brandRouter = require("./routes/brandRoute.js");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 const morgan = require("morgan");
@@ -32,6 +33,7 @@ dbConnect()
         app.use("/api/v1/blog", blogRouter)
         app.use("/api/v1/product-category", prodCategoryRouter)
         app.use("/api/v1/blog-category", blogCategoryRouter)
+        app.use("/api/v1/brand", brandRouter)
 
 
         app.listen(PORT, () => {
