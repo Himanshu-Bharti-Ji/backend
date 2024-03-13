@@ -6,7 +6,8 @@ const dotenv = require("dotenv").config({ path: ".env" });
 const PORT = process.env.PORT || 4000;
 const authRouter = require("./routes/authRoute.js");
 const productRouter = require("./routes/productRoute.js");
-const categoryRouter = require("./routes/prodCategoryRoute.js");
+const prodCategoryRouter = require("./routes/prodCategoryRoute.js");
+const blogCategoryRouter = require("./routes/blogCategoryRoute.js");
 const blogRouter = require("./routes/blogRoute.js");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
@@ -29,7 +30,8 @@ dbConnect()
         app.use("/api/v1/user", authRouter)
         app.use("/api/v1/product", productRouter)
         app.use("/api/v1/blog", blogRouter)
-        app.use("/api/v1/category", categoryRouter)
+        app.use("/api/v1/product-category", prodCategoryRouter)
+        app.use("/api/v1/blog-category", blogCategoryRouter)
 
 
         app.listen(PORT, () => {
