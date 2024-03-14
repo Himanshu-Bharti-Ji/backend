@@ -10,6 +10,7 @@ const prodCategoryRouter = require("./routes/prodCategoryRoute.js");
 const blogCategoryRouter = require("./routes/blogCategoryRoute.js");
 const blogRouter = require("./routes/blogRoute.js");
 const brandRouter = require("./routes/brandRoute.js");
+const couponRouter = require("./routes/couponRoute.js");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 const morgan = require("morgan");
@@ -34,6 +35,7 @@ dbConnect()
         app.use("/api/v1/product-category", prodCategoryRouter)
         app.use("/api/v1/blog-category", blogCategoryRouter)
         app.use("/api/v1/brand", brandRouter)
+        app.use("/api/v1/coupon", couponRouter)
 
 
         app.listen(PORT, () => {
