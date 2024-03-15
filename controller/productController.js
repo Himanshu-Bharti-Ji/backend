@@ -103,8 +103,6 @@ const getAllProducts = asyncHandeler(async (req, res) => {
     }
 })
 
-
-
 const updateProduct = asyncHandeler(async (req, res) => {
     const { id } = req.params
     // console.log(id)
@@ -268,6 +266,10 @@ const ratings = asyncHandeler(async (req, res) => {
 
 })
 
+const uploadImages = asyncHandeler(async (req, res) => {
+    console.log(req.files);
+})
+
 
 
 
@@ -278,5 +280,6 @@ module.exports = {
     updateProduct,
     deleteProduct,
     addToWishlist,
-    ratings
+    ratings,
+    uploadImages,
 }
