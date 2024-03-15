@@ -14,10 +14,10 @@ const uploadOnCloudinary = async (localFilePath) => {
     return new Promise((resolve, reject) => {
         cloudinary.uploader.upload(localFilePath, { resource_type: "auto" }, (error, result) => {
             if (error) {
-                console.error("Error uploading file to Cloudinary:", error);
+                // console.error("Error uploading file to Cloudinary:", error);
                 reject(error);
             } else {
-                console.log("File uploaded successfully to Cloudinary:", result.secure_url);
+                // console.log("File uploaded successfully to Cloudinary:", result.secure_url);
                 resolve({ url: result.secure_url });
             }
         });

@@ -37,10 +37,7 @@ var blogSchema = new mongoose.Schema({
             ref: "User"
         }
     ],
-    image: {
-        type: String,
-        default: "https://media.istockphoto.com/id/1252684502/photo/professional-blogger-working-on-his-new-post-for-social-media-at-home-closeup-creative.jpg?s=612x612&w=0&k=20&c=VR7V3Hn1HKjMQdykk2zjQ-2Xjsiw3tewZFZMp6swpog="
-    },
+    images: [],
     author: {
         type: String,
         default: "Admin"

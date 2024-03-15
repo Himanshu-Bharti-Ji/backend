@@ -4,6 +4,9 @@ const { asyncHandeler } = require("../utils/asyncHandeler.js");
 const validateMongoDbId = require("../utils/validateMongodbId.js");
 const ApiError = require("../utils/ApiError.js");
 const ApiResponse = require("../utils/ApiResponse.js");
+const uploadOnCloudinary = require("../utils/cloudinary.js");
+const fs = require("fs");
+
 
 
 const createBlog = asyncHandeler(async (req, res) => {
@@ -202,7 +205,45 @@ const dislikeBlog = asyncHandeler(async (req, res) => {
 
     }
 
+})
 
+const uploadImages = asyncHandeler(async (req, res) => {
+    const { id } = req.params;
+    validateMongoDbId(id);
+    // console.log(req.files);
+
+    try {
+        const uploader = (path) => uploadOnCloudinary(path, "images");
+        const urls = [];
+        const files = req.files;
+        for (const file of files) {
+            const { path } = file;
+            const cloudUrl = await uploader(path);
+            urls.push(cloudUrl);
+            try {
+                fs.unlinkSync(path);
+            } catch (error) {
+                console.error(`Error unlinking file: ${error.message}`);
+            }
+
+        }
+
+        const findBlog = await Blog.findByIdAndUpdate(
+            id,
+            { images: urls.map(file => { return file }) },
+            { new: true }
+        )
+
+        return res.status(200)
+            .json(new ApiResponse(
+                200,
+                findBlog,
+                `Image uploaded successfully`
+            ))
+
+    } catch (error) {
+        throw new ApiError(400, error?.message || "Error in uploading image")
+    }
 })
 
 module.exports = {
@@ -213,4 +254,5 @@ module.exports = {
     deleteCurrentBlog,
     likeBlog,
     dislikeBlog,
+    uploadImages
 }

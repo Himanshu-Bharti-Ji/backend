@@ -6,7 +6,8 @@ const ApiResponse = require("../utils/ApiResponse.js");
 const { asyncHandeler } = require("../utils/asyncHandeler.js");
 const slugify = require("slugify");
 const validateMongoDbId = require("../utils/validateMongodbId.js");
-const uploadOnCloudinary = require("../utils/cloudinary.js")
+const uploadOnCloudinary = require("../utils/cloudinary.js");
+const fs = require("fs");
 
 const createProduct = asyncHandeler(async (req, res) => {
 
@@ -258,14 +259,6 @@ const ratings = asyncHandeler(async (req, res) => {
             'Your ratings has been added to our records.'
 
         ))
-
-
-
-
-
-
-
-
 })
 
 const uploadImages = asyncHandeler(async (req, res) => {
@@ -277,14 +270,16 @@ const uploadImages = asyncHandeler(async (req, res) => {
         const uploader = (path) => uploadOnCloudinary(path, "images");
         const urls = [];
         const files = req.files;
-        // console.log(files);
         for (const file of files) {
             console.log(file);
             const { path } = file;
-            // console.log(path);
             const cloudUrl = await uploader(path);
-            // console.log(cloudUrl);
             urls.push(cloudUrl);
+            try {
+                fs.unlinkSync(path);
+            } catch (error) {
+                console.error(`Error unlinking file: ${error.message}`);
+            }
         }
 
         const findProdduct = await Product.findByIdAndUpdate(
