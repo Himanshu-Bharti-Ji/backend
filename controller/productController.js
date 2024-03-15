@@ -5,6 +5,8 @@ const ApiError = require("../utils/ApiError.js");
 const ApiResponse = require("../utils/ApiResponse.js");
 const { asyncHandeler } = require("../utils/asyncHandeler.js");
 const slugify = require("slugify");
+const validateMongoDbId = require("../utils/validateMongodbId.js");
+const uploadOnCloudinary = require("../utils/cloudinary.js")
 
 const createProduct = asyncHandeler(async (req, res) => {
 
@@ -267,7 +269,40 @@ const ratings = asyncHandeler(async (req, res) => {
 })
 
 const uploadImages = asyncHandeler(async (req, res) => {
-    console.log(req.files);
+    const { id } = req.params;
+    validateMongoDbId(id);
+    // console.log(req.files);
+
+    try {
+        const uploader = (path) => uploadOnCloudinary(path, "images");
+        const urls = [];
+        const files = req.files;
+        // console.log(files);
+        for (const file of files) {
+            console.log(file);
+            const { path } = file;
+            // console.log(path);
+            const cloudUrl = await uploader(path);
+            // console.log(cloudUrl);
+            urls.push(cloudUrl);
+        }
+
+        const findProdduct = await Product.findByIdAndUpdate(
+            id,
+            { images: urls.map(file => { return file }) },
+            { new: true }
+        )
+
+        return res.status(200)
+            .json(new ApiResponse(
+                200,
+                findProdduct,
+                `Image uploaded successfully`
+            ))
+
+    } catch (error) {
+        throw new ApiError(400, error?.message || "Error in uploading image")
+    }
 })
 
 
