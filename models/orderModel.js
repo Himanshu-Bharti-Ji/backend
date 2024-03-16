@@ -28,7 +28,7 @@ var orderSchema = new mongoose.Schema({
             "Failed",
         ],
     },
-    orderBy: {
+    orderby: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"
     }

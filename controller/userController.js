@@ -1,12 +1,15 @@
 const User = require("../models/userModel.js");
 const Cart = require("../models/cartModel.js");
 const Product = require("../models/productModel.js");
+const Coupon = require("../models/couponModel.js");
+const Order = require("../models/orderModel.js");
 const ApiError = require("../utils/ApiError.js");
 const ApiResponse = require("../utils/ApiResponse.js");
 const { asyncHandeler } = require("../utils/asyncHandeler.js");
 const validateMongoDbId = require("../utils/validateMongodbId.js");
 const jwt = require("jsonwebtoken");
 const sendEmail = require("./emailController.js");
+const uniqid = require('uniqid');
 
 const generateAccessAndRefreshToken = async (userId) => {
     try {
@@ -541,9 +544,169 @@ const getUserCart = asyncHandeler(async (req, res) => {
     try {
         const cart = await Cart.findOne({ orderby: _id }).populate("products.product");
 
-        res.json(cart)
+        return res.status(200)
+            .json(new ApiResponse(200, cart, 'Getting user cart was successful'))
+
     } catch (error) {
         throw new ApiError(500, error?.message || 'Server error while getting user cart')
+    }
+})
+
+const emptyCart = asyncHandeler(async (req, res) => {
+    const { _id } = req.user;
+    validateMongoDbId(_id);
+
+    try {
+        const user = await User.findOne({ _id })
+        const cart = await Cart.findOneAndDelete({ orderby: user._id });
+
+        return res.status(200)
+            .json(new ApiResponse(200, cart, 'The cart has been emptied',))
+
+    } catch (error) {
+        throw new ApiError(500, error?.message || "Server Error While Emptying The Cart")
+    }
+})
+
+const applyCoupon = asyncHandeler(async (req, res) => {
+    const { coupon } = req.body;
+    const { _id } = req.user;
+    validateMongoDbId(_id);
+
+    const validCoupon = await Coupon.findOne({ name: coupon });
+
+    if (validCoupon === null) {
+        throw new ApiError(404, "Please provide a valid Coupon code")
+    }
+
+    try {
+        const user = await User.findOne({ _id });
+
+        let { cartTotal } = await Cart.findOne({ orderby: user._id }).populate("products.product");
+
+        let totalAfterDiscount = (cartTotal - (cartTotal * validCoupon.discount) / 100).toFixed(2);
+
+        await Cart.findOneAndUpdate(
+            { orderby: user._id },
+            { totalAfterDiscount },
+            { new: true }
+        )
+
+        return res.status(200)
+            .json(new ApiResponse(200, totalAfterDiscount, `Your discounted amount is ${totalAfterDiscount}`));
+
+    } catch (error) {
+        throw new ApiError(500, error?.message || "Server Error while Applying the Discount")
+    }
+})
+
+const createOrder = asyncHandeler(async (req, res) => {
+    const { COD, couponApplied } = req.body;
+    const { _id } = req.user;
+    validateMongoDbId(_id);
+
+    // Check whether payment method is cash on delivery or not
+    if (!COD) {
+        throw new ApiError(400, "Create Order Failed! Payment Method Required.")
+    }
+
+    const user = await User.findById(_id);
+    let userCart = await Cart.findOne({ orderby: user._id })
+    let finalAmount = 0;
+    if (couponApplied && userCart.totalAfterDiscount) {
+        finalAmount = userCart.totalAfterDiscount
+    } else {
+        finalAmount = userCart.cartTotal;
+    }
+
+    // console.log(user);
+
+    let newOrder = await new Order(
+        {
+            products: userCart.products,
+            paymentIntent: {
+                id: uniqid(),
+                method: "COD",
+                amount: finalAmount,
+                status: "Pending",
+                created: Date.now(),
+                currency: "inr",
+
+            },
+            orderStatus: "Pending",
+            orderby: user._id,
+        }
+    ).save();
+
+    // console.log(newOrder);
+
+    let update = userCart.products.map((item) => {
+        return {
+            updateOne: {
+                filter: { _id: item.product._id },
+                update: {
+                    $inc: {
+                        quantity: -item.count,
+                        sold: +item.count
+                    }
+                }
+            }
+        }
+    })
+
+    const updated = await Product.bulkWrite(update, {})
+
+    return res.status(200)
+        .json(new ApiResponse(200, newOrder, 'Order placed successfully'))
+
+
+})
+
+const getOrders = asyncHandeler(async (req, res) => {
+    const { _id } = req.user;
+    validateMongoDbId(_id);
+    console.log(_id);
+
+    try {
+
+        // console.log(user);
+        const userOrders = await Order.findOne({ orderby: _id })
+            .populate("products.product")
+            .populate("orderby").exec()
+        console.log(userOrders);
+
+        return res.status(200)
+            .json(new ApiResponse(200, userOrders, 'User orders fetched Successfully'));
+
+    } catch (error) {
+        throw new ApiError(404, error?.message || 'Something went wrong!');
+    }
+})
+
+const updateOrderStatus = asyncHandeler(async (req, res) => {
+    const { status } = req.body;
+    const { id } = req.params;
+    validateMongoDbId(id);
+    try {
+        const updateOrderStatus = await Order.findByIdAndUpdate(
+            id,
+            {
+                orderStatus: status,
+                paymentIntent: {
+                    status: status
+                }
+            },
+            { new: true }
+        );
+
+        return res.status(201)
+            .json(new ApiResponse(
+                201,
+                updateOrderStatus,
+                `The order with the id of ${updateOrderStatus.id} has been updated to be ${status}`
+            ));
+    } catch (error) {
+        throw new ApiError(400, error?.message || "Failed to update order status")
     }
 })
 
@@ -564,5 +727,10 @@ module.exports = {
     getWishlist,
     saveUserAddress,
     userCart,
-    getUserCart
+    getUserCart,
+    emptyCart,
+    applyCoupon,
+    createOrder,
+    getOrders,
+    updateOrderStatus
 }
