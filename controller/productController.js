@@ -6,8 +6,8 @@ const ApiResponse = require("../utils/ApiResponse.js");
 const { asyncHandeler } = require("../utils/asyncHandeler.js");
 const slugify = require("slugify");
 const validateMongoDbId = require("../utils/validateMongodbId.js");
-const uploadOnCloudinary = require("../utils/cloudinary.js");
 const fs = require("fs");
+const { uploadOnCloudinary, deleteFromCloudinary } = require("../utils/cloudinary.js")
 
 const createProduct = asyncHandeler(async (req, res) => {
 
@@ -82,7 +82,7 @@ const getAllProducts = asyncHandeler(async (req, res) => {
         const limit = parseInt(req.query.limit ? req.query.limit : 6);
         const skip = (page - 1) * limit;
         query = query.skip(skip).limit(limit);
-        console.log(page, limit, skip);
+        // console.log(page, limit, skip);
 
         if (req.query.page) {
             const totalPages = await Product.countDocuments();
@@ -113,7 +113,7 @@ const updateProduct = asyncHandeler(async (req, res) => {
 
     if (req.body.title) {
         req.body.slug = slugify(req.body.title)
-        console.log(req.body.slug);
+        // console.log(req.body.slug);
     }
 
     // console.log(req.body);
@@ -143,7 +143,7 @@ const deleteProduct = asyncHandeler(async (req, res) => {
 const addToWishlist = asyncHandeler(async (req, res) => {
     const { _id } = req.user;
     const { productId } = req.body;
-    console.log(_id, productId);
+    // console.log(_id, productId);
 
 
     // if (!user) {
@@ -262,16 +262,18 @@ const ratings = asyncHandeler(async (req, res) => {
 })
 
 const uploadImages = asyncHandeler(async (req, res) => {
-    const { id } = req.params;
-    validateMongoDbId(id);
-    // console.log(req.files);
-
     try {
+        // console.log("req.files", req.files);
+        // const files = req.files;
+        // if (!Array.isArray(files)) {
+        //     throw new ApiError(400, "No files uploaded");
+        // }
+
         const uploader = (path) => uploadOnCloudinary(path, "images");
         const urls = [];
         const files = req.files;
+        // console.log("Files", files);
         for (const file of files) {
-            console.log(file);
             const { path } = file;
             const cloudUrl = await uploader(path);
             urls.push(cloudUrl);
@@ -282,21 +284,37 @@ const uploadImages = asyncHandeler(async (req, res) => {
             }
         }
 
-        const findProdduct = await Product.findByIdAndUpdate(
-            id,
-            { images: urls.map(file => { return file }) },
-            { new: true }
-        )
+        // console.log(urls);
+        const images = urls.map((file) => {
+            return file;
+        })
 
         return res.status(200)
             .json(new ApiResponse(
                 200,
-                findProdduct,
+                images,
                 `Image uploaded successfully`
             ))
 
     } catch (error) {
         throw new ApiError(400, error?.message || "Error in uploading image")
+    }
+})
+
+const deleteImages = asyncHandeler(async (req, res) => {
+    const { id } = req.params;
+    try {
+        const deleted = await deleteFromCloudinary(id, "image");
+
+        return res.status(200)
+            .json(new ApiResponse(
+                200,
+                deleted,
+                `Image deleted successfully`
+            ))
+
+    } catch (error) {
+        throw new ApiError(400, error?.message || "Error in deleting image")
     }
 })
 
@@ -312,4 +330,5 @@ module.exports = {
     addToWishlist,
     ratings,
     uploadImages,
+    deleteImages
 }

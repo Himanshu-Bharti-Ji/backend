@@ -18,7 +18,13 @@ const uploadOnCloudinary = async (localFilePath) => {
                 reject(error);
             } else {
                 // console.log("File uploaded successfully to Cloudinary:", result.secure_url);
-                resolve({ url: result.secure_url });
+                resolve(
+                    {
+                        url: result.secure_url,
+                        asset_id: result.asset_id,
+                        public_id: result.public_id
+                    }
+                );
             }
         });
     });
@@ -26,6 +32,29 @@ const uploadOnCloudinary = async (localFilePath) => {
 }
 
 
-module.exports = uploadOnCloudinary;
+const deleteFromCloudinary = async (publicId, resourceType = 'image') => {
+
+    return new Promise((resolve, reject) => {
+        cloudinary.uploader.destroy(publicId, { resource_type: resourceType }, (error, result) => {
+            if (error) {
+                // console.error("Error uploading file to Cloudinary:", error);
+                reject(error);
+            } else {
+                // console.log("File uploaded successfully to Cloudinary:", result.secure_url);
+                resolve(
+                    {
+                        url: result.secure_url,
+                        asset_id: result.asset_id,
+                        public_id: result.public_id
+                    }
+                );
+            }
+        });
+    });
+
+}
+
+
+module.exports = { uploadOnCloudinary, deleteFromCloudinary };
 
 
