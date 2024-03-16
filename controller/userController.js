@@ -118,6 +118,61 @@ const loginUser = asyncHandeler(async (req, res) => {
 
 })
 
+// login Admin
+
+const loginAdmin = asyncHandeler(async (req, res) => {
+    // 1. req body -> data (request body se data le aao)
+    const { email, password } = req.body
+
+    // 2. validation - not empty
+    if (!(email || password)) {
+        throw ApiError(400, "username and password is required")
+    }
+
+    // 3. find the user
+    const admin = await User.findOne({ email })
+
+    // console.log(user)
+
+    if (!admin) {
+        throw new ApiError(404, "User does not exist")
+    }
+
+    if (admin.role !== "admin") {
+        throw new ApiError(403, 'You are not authorized to perform this action')
+    }
+
+    // 4. password check
+    const isPasswordValid = await admin.isPasswordCorrect(password)
+    // console.log(isPasswordValid)
+
+    if (!isPasswordValid) {
+        throw new ApiError(401, "Invalid user credentials")
+    }
+
+    // 5. generate token
+
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(admin._id)
+
+    const loggedInAdmin = await User.findById(admin._id).select("-password -refreshToken")
+
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+
+    return res.status(200)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", refreshToken, options)
+        .json(new ApiResponse(
+            200,
+            {
+                user: loggedInAdmin, accessToken, refreshToken
+            },
+            "User logged in successfully"
+        ))
+})
+
 const logoutUser = asyncHandeler(async (req, res) => {
     await User.findByIdAndUpdate(
         req.user._id,
@@ -187,6 +242,33 @@ const refreshAccessToken = asyncHandeler(async (req, res) => {
     } catch (error) {
         throw new ApiError(401, error?.message || "Something went wrong while trying to verify your tokens")
     }
+})
+
+const saveUserAddress = asyncHandeler(async (req, res) => {
+    const { address } = req.body
+    const { _id } = req.user;
+    validateMongoDbId(_id);
+
+    try {
+        const updatedUser = await User.findByIdAndUpdate(
+            _id,
+            {
+                $set: {
+                    address
+                }
+            },
+            { new: true }
+        )
+
+        return res.status(200)
+            .json(new ApiResponse(200, updatedUser, 'Adress saved successfully'))
+
+    } catch (error) {
+        throw new ApiError(400, error?.message || 'Invalid data provided')
+    }
+
+
+
 })
 
 const getAllUsers = asyncHandeler(async (req, res) => {
@@ -386,6 +468,25 @@ const forgotPasswordToken = asyncHandeler(async (req, res) => {
     }
 })
 
+const getWishlist = asyncHandeler(async (req, res) => {
+    const { _id } = req.user;
+    console.log(req.user)
+    try {
+        // console.log(user);
+        const user = await User.findById(_id).populate("wishlist")
+
+        return res.status(200)
+            .json(new ApiResponse(
+                200,
+                user,
+                "User Wishlist fetched Successfully"
+            ))
+
+    } catch (error) {
+        throw new ApiError(500, error?.message || 'Something went wrong while fetching wishlist')
+    }
+})
+
 module.exports = {
     registerUser,
     loginUser,
@@ -398,5 +499,8 @@ module.exports = {
     logoutUser,
     refreshAccessToken,
     updatePassword,
-    forgotPasswordToken
+    forgotPasswordToken,
+    loginAdmin,
+    getWishlist,
+    saveUserAddress
 }

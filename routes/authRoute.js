@@ -10,7 +10,10 @@ const { registerUser,
     logoutUser,
     refreshAccessToken,
     updatePassword,
-    forgotPasswordToken
+    forgotPasswordToken,
+    loginAdmin,
+    getWishlist,
+    saveUserAddress
 } = require("../controller/userController.js");
 const { verifyJWT, isAdmin } = require("../middlewares/authMiddleware.js");
 
@@ -21,11 +24,15 @@ router.post("/register", registerUser);
 router.post("/forgot-password-token", forgotPasswordToken)
 router.put("/update-password", verifyJWT, updatePassword)
 router.post("/login", loginUser);
+router.post("/admin-login", loginAdmin);
 router.post("/refresh-token", refreshAccessToken);
 router.get("/all-users", getAllUsers);
+router.get("/wishlist", verifyJWT, getWishlist);
 router.get("/:id", verifyJWT, isAdmin, getCurrentUser);
 router.delete("/:id", deleteCurrentUser);
+
 router.put("/update-account", verifyJWT, updateUserDetails)
+router.put("/save-address", verifyJWT, saveUserAddress)
 router.put("/block-account/:id", verifyJWT, isAdmin, blockUser)
 router.put("/unblock-account/:id", verifyJWT, isAdmin, unBlockUser)
 router.post("/logout", verifyJWT, logoutUser);
